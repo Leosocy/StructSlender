@@ -11,9 +11,9 @@ class StructManager(object):
     存储原始字符串用于优化顺序后写回操作
     """
 
-    STRUCT_REGIX_HEADER = r'([\w ]*?struct.*?)\{'
-    STRUCT_REGIX_BODY = r'\{(.+)\}'
-    STRUCT_REGIX_TAIL = r'.*\}(.*);'
+    PATTERN_STRUCT_HEADER = re.compile(r'([\w ]*?struct.*?)\{')
+    PATTERN_STRUCT_BODY = re.compile(r'\{(.+)\}')
+    PATTERN_STRUCT_TAIL = re.compile(r'.*\}(.*);')
 
     def parse_from_string(self, struct_str):
         """
@@ -21,21 +21,25 @@ class StructManager(object):
         """
 
         struct_str = re.sub('[\r\n\t]', '', struct_str.strip())
-        if (not self._is_valid(struct_str)) or (not self._is_struct(struct_str)):
+        if not StructManager.valid(struct_str) or not self._is_struct(struct_str):
             return None
-        struct_instance = Struct()
+        struct_instance = Struct(self._STRUCT_HEADER, self._STRUCT_BODY, self._STRUCT_TAIL)
         return struct_instance
 
     def _is_struct(self, struct_str):
-        print(struct_str)
-        pattern = re.compile(self.STRUCT_REGIX_TAIL)
-        searchObj = pattern.findall(struct_str)
-        if not searchObj:
+        headers = self.PATTERN_STRUCT_HEADER.findall(struct_str)
+        body = self.PATTERN_STRUCT_BODY.findall(struct_str)
+        tail = self.PATTERN_STRUCT_TAIL.findall(struct_str)
+        if not headers or not body:
             return False
-        print(searchObj)
+        self._STRUCT_HEADER = headers[0].strip()
+        self._STRUCT_BODY = body[0].strip()
+        self._STRUCT_TAIL = ""
+        if tail:
+            self._STRUCT_TAIL = tail[0].strip()
         return True
 
-    def _is_valid(self, struct_str):
+    def valid(struct_str):
         brackets_map = {'{':'}', '[':']', '(':')'}
         brackets_stack = []
         for char in struct_str:
@@ -61,7 +65,30 @@ class StructType(object):
 
     STRUCT_A_XXX = "struct A {xxx};"
     STRUCT_A_XXX_V_T = "struct A {xxx} V_T;"
-    STRUCT_XXX_V_T = "struct {xxx} V_T"
+    STRUCT_XXX_V_T = "struct {xxx} V_T;"
+
+    STRUCT_TYPE_INVALID = "struct {xxx};"
+
+    def get_type(header, tail):
+        header_pattern = re.compile(r".*struct.*?(\w+)")
+        struct_name = header_pattern.findall(header)
+        if "typedef" in header:
+            if struct_name:
+                return StructType.TYPEDEF_STRUCT_A_XXX_T
+            else:
+                return StructType.TYPEDEF_STRUCT_XXX_T
+        else:
+            if struct_name:
+                if tail == "":
+                    return StructType.STRUCT_A_XXX
+                else:
+                    return StructType.STRUCT_A_XXX_V_T
+            else:
+                if tail == "":
+                    return StructType.STRUCT_TYPE_INVALID
+                else:
+                    return StructType.STRUCT_XXX_V_T
+
 
 class Struct(object):
     """
@@ -69,7 +96,9 @@ class Struct(object):
     """
 
 
-    def __init__(self):
+    def __init__(self, header, body, tail):
+        struct_type = StructType.get_type(header, tail)
+        print(struct_type)
         self.orig_struct_str = ""
         self.has_typedef = False
         self.struct_name = []
