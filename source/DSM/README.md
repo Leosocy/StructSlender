@@ -2,4 +2,12 @@
 
 ## StructManager
 
+## StructType
+
 ## Struct
+
+## VariableManager
+
+## VariableType
+
+## Variable
