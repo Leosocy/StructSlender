@@ -1,1 +1,1 @@
-__all__ = ['StructManager', 'StructType', 'Struct']
+__all__ = ['StructManager', 'StructType', 'Struct', 'VariableManager', 'VariableType', 'Variable']
